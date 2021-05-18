@@ -6,13 +6,23 @@ const MongoDBStore = require('connect-mongodb-session')(session);
 const csrf = require('csurf')
 const flash = require('connect-flash')
 require('dotenv').config()
+const {v4: uuidv4 } = require('uuid')
+const multer = require('multer')
 
 const adminRouters = require('./routes/admin');
 const shopRouters = require('./routes/shop');
 const authRouters = require('./routes/auth')
 
 const errorController = require('./controllers/error');
-const User = require('./models/User')
+const User = require('./models/User');
+const { dirname } = require('path');
+
+//-------------------Setup MIME Type---------------
+const MIME_TYPE_MAP = {
+    "image/jpg" : "jpg",
+    "image/jpeg": "jpeg",
+    "image/gif": "gif"
+}   
 
 //--------------------Setups--------------------
 const app = express();
@@ -23,12 +33,32 @@ const store = new MongoDBStore({
 const csrfProtection = csrf()
 app.use(express.urlencoded({extended:false}));
 
+//parse the requrest body into readable data (from multipartform)
+app.use(multer({
+    limits: 5000000, //bytes
+    storage: multer.diskStorage({
+        destination: (req ,file, cb) => {
+            cb(null, 'uploads/images')
+        },
+        filename: (req ,file, cb) => {
+            const ext = MIME_TYPE_MAP[file.mimetype]
+            cb(null, uuidv4() + '.' + ext) //asfasgwe23r23fse43tf.jpg
+        }
+    }),
+    fileFilter: (req,file,cb) => {
+        const isValid = !!MIME_TYPE_MAP[file.mimetype]
+        let error = isValid ? null : new Error('Invalid MIME type')
+        cb(error, isValid)
+    }
+}).single('image'))
+
 //app.set = allows us to set any values globally on our express application
 app.set('view engine', 'ejs');
 //views is set to default path of views but I am just implicitly showing
 app.set('views','views');
 
 //serve file statically
+app.use('/uploads/images', express.static(path.join(__dirname, 'uploads', 'images')))
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(session({
     secret: process.env.SESSION_KEY,

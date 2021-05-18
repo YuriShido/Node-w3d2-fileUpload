@@ -1,6 +1,8 @@
 const Product = require('../models/Products')
 const { validationResult } = require('express-validator')
 
+const fileHelper = require('../util/file')
+
 exports.getAddProduct = (req, res, next) => {
   res.render('admin/edit-product', {
     pageTitle: 'Add a product',
@@ -10,11 +12,23 @@ exports.getAddProduct = (req, res, next) => {
 }
 
 exports.postAddProduct = (req, res, next) => {
+  const errors = validationResult(req)
+  if(!errors.isEmpty()) {
+    console.log('postSddProduct:' ,errors)
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/add-product',
+      editing: false,
+      errorMessage: errors.array()[0].msg,
+      
+    })
+  } 
+
   const product = new Product({
     title: req.body.title,
     price: req.body.price,
     description: req.body.description,
-    imageUrl: req.body.imageUrl,
+    image: req.file.path,
     userId: req.user
   })
   product.save().then(() => {
@@ -44,13 +58,30 @@ exports.postEditProduct = (req, res, next) => {
   const updatedTitle = req.body.title
   const updatedPrice = req.body.price
   const updateDesc = req.body.description
-  const updatedImageUrl = req.body.imageUrl
+  const updatedImage = req.file?.path
+
+  const errors = validationResult(req)
+  if(!errors.isEmpty()) {
+    console.log('postSddProduct:' ,errors)
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Edit Product',
+      path: '/admin/edit-product',
+      editing: true,
+      errorMessage: errors.array()[0].msg,
+      
+    })
+  } 
 
   Product.findById(prodId).then(product => {
     product.title = updatedTitle,
     product.price = updatedPrice,
-    product.description = updateDesc,
-    product.imageUrl = updatedImageUrl
+    product.description = updateDesc
+    if(updatedImage) {
+      fileHelper.deleteFile(product.image)
+      product.image = updatedImage
+    } else {
+      product.image = updatedImage
+    }
     return product.save()
   })
   .then(() => {
