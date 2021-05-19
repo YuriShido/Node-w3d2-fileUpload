@@ -18,7 +18,7 @@ exports.getProducts = (req, res, next) => {
 }
 
 exports.getOneProductById = (req, res, next) => {
-  Product.findById(req.params.id)
+  Product.findById(req.params.id) //req.param.idはルートでルートパスに設定している値をとってこれる
     .then((product) => {
       res.render('shop/product-detail', {
         pageTitle: product.title,
@@ -108,7 +108,7 @@ exports.getOrders = (req, res, next) => {
 
 exports.getInvoice = (req,res, next) => {
   const orderId = req.params.orderId
-
+  console.log('req',req.params);
   Order.findById(orderId).then((order) => {
     if(!order){
       return res.redirect('/')
@@ -121,26 +121,32 @@ exports.getInvoice = (req,res, next) => {
     }
 
     const invoiceName = 'invoice-' + orderId + '.pdf'
-    const invoivePath = path.join('data', 'invoices', invoiceName)
+    const invoicePath = path.join('data', 'invoices', invoiceName)
 
+    //PDFのドキュメントを作る
     const pdfDoc = new PDFDocument()
+    //Content-Type はメディアの種類
     res.setHeader('Content-Type', 'application/pdf')
+    //'Content-Disposition', 'inlineはウェブページの一部として、またはウェブページとして表示可能であることを示す
+    //filename=送信された元のファイル名を含む文字列を指定
     res.setHeader('Content-Disposition', 'inline; filename="' + invoiceName + '"')
 
-    pdfDoc.pipe(fs.createWriteStream(invoivePath))
+    //outputする場所を指定する
+    pdfDoc.pipe(fs.createWriteStream(invoicePath))
     pdfDoc.pipe(res)
+    //fontsizeやtextで本文の指定　underline:trueはつけるってこと
     pdfDoc.fontSize(26).text('Invoice', {
       underline: true
     })
-    pdfDoc.text('-----------------------------------')
+    pdfDoc.text('***********************************')
     let totalPrice = 0
     order.products.forEach(prod => {
       totalPrice += prod.quantity * prod.product.price
       pdfDoc.fontSize(14).text(
-        prod.product.title + ' - ' + prod.quantity + ' x ' + '$' + prod.product.price
+        prod.product.title + '  -  ' + prod.quantity + ' x ' + '$' + prod.product.price
       )
     })
-    pdfDoc.text('-----------------------------------')
+    pdfDoc.text('****************************************')
     pdfDoc.fontSize(20).text('Total Price: $' + totalPrice)
 
     pdfDoc.end()

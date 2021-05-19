@@ -60,16 +60,24 @@ app.set('views','views');
 //serve file statically
 app.use('/uploads/images', express.static(path.join(__dirname, 'uploads', 'images')))
 app.use(express.static(path.join(__dirname, 'public')))
+//setting session value  sessionを使う為の設定
 app.use(session({
+    //secretキーとしてクッキーを暗号化する設定
     secret: process.env.SESSION_KEY,
+    //セッションチェックを行うたびにセッションを作成するかどうかの指定
     resave: false,
+    // 未初期化状態のセッションを保存するかどうかの指定
     saveUninitialized: false,
+    //
     store: store
 }))
+
+//cserfのセキュリティーを使う為の設定
 app.use(csrfProtection)
+
 app.use(flash())
 
-// Dummy Auth
+
 app.use((req,res,next) => {
     if(!req.session.user){
         return next()
@@ -83,7 +91,8 @@ app.use((req,res,next) => {
     }).catch(err => console.log(err))
 
 })
-
+//res.localsにするとresponse とrequestのサイクルの中でviewの中で使えるvalueの設定ができる
+//これはisAuth,とセキュリティの為のcsrfTokenをviewフォルダーの中のバリューで使えるように設定している
 app.use((req,res,next) => {
     res.locals.csrfToken = req.csrfToken()
     res.locals.isAuth = req.session.isLoggedIn
@@ -99,6 +108,7 @@ app.use(authRouters)
 app.use(errorController.get404);
 //----------------End of Middleware-----------------
 
+//connecting to mongoose
 mongoose.connect(process.env.MONGODB_URL, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
